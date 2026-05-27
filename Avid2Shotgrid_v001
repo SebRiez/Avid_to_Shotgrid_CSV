@@ -43,8 +43,8 @@ def convert_dataframe(df_source):
     # 5. Quelle Frame Count End + handles -> Ziel Last frame Frame Out
     df_target['Last frame Frame Out'] = df_source['Frame Count End'] + df_source['handles']
     
-    # 6. Quelle Frame Count Duration -> Ziel Working duration Frame Count
-    df_target['Working duration Frame Count'] = df_source['Frame Count Duration']
+    # 6. Quelle Frame Count Duration + 2 * handles -> Ziel Working duration Frame Count
+    df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] + (2 * df_source['handles'])
     
     # 7. LEER: Description, Submitted For, Artist und Submission
     df_target['Description'] = ""
@@ -68,28 +68,22 @@ uploaded_file = st.file_uploader("Tab-Delimited Quelldatei (.txt) hochladen", ty
 
 if uploaded_file is not None:
     try:
-        # 1. Dynamischen Dateinamen für den Export generieren
-        # Holt den reinen Dateinamen ohne die .txt-Endung
+        # Dynamischen Dateinamen für den Export generieren
         base_filename = os.path.splitext(uploaded_file.name)[0]
-        # Generiert das aktuelle Datum im Format YYMMDD (z.B. 260527)
         current_date = datetime.now().strftime("%y%m%d")
-        # Setzt den neuen CSV-Dateinamen zusammen
         export_filename = f"{base_filename}_toShotgrid_{current_date}_v01.csv"
         
-        # Datei as Binärdaten auslesen
+        # Datei als Binärdaten auslesen
         raw_bytes = uploaded_file.getvalue()
         
         # Verbesserte Encoding-Erkennung
         try:
             text_content = raw_bytes.decode('utf-8-sig')
-            encoding_used = 'UTF-8 (mit/ohne BOM)'
         except UnicodeDecodeError:
             try:
                 text_content = raw_bytes.decode('utf-16')
-                encoding_used = 'UTF-16'
             except UnicodeDecodeError:
                 text_content = raw_bytes.decode('latin-1', errors='ignore')
-                encoding_used = 'Fallback (Latin-1)'
             
         # Zeilenumbrüche vereinheitlichen
         lines = [line for line in text_content.replace('\r\n', '\r').replace('\n', '\r').split('\r') if line.strip()]
@@ -114,8 +108,6 @@ if uploaded_file is not None:
         df_source = pd.DataFrame(adjusted_rows, columns=header)
         df_source.columns = df_source.columns.astype(str).str.strip()
         
-        st.success(f"Datei erfolgreich über Tab-Struktur rekonstruiert! (Erkanntes Encoding: {encoding_used})")
-        
         # Konvertierung ausführen
         df_converted = convert_dataframe(df_source)
         
@@ -128,7 +120,7 @@ if uploaded_file is not None:
         df_converted.to_csv(csv_buffer, index=False)
         csv_bytes = csv_buffer.getvalue().encode('utf-8')
         
-        # Download-Button bereitstellen mit dem neuen dynamischen Dateinamen
+        # Download-Button bereitstellen mit dem dynamischen Dateinamen
         st.download_button(
             label=f"💾 Generierte CSV ({export_filename}) herunterladen",
             data=csv_bytes,
