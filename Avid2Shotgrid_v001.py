@@ -4,7 +4,7 @@ import io
 import os
 from datetime import datetime
 
-def convert_dataframe(df_source):
+def convert_dataframe(df_source, handle_mode_start, handle_mode_end, handle_mode_duration):
     df_target = pd.DataFrame()
     
     # Alle Spaltennamen von unsichtbaren Zeichen (\t, \r, Leerzeichen) befreien
@@ -37,14 +37,29 @@ def convert_dataframe(df_source):
     # 3. LEER: Format File Type
     df_target['Format File Type'] = "" 
     
-    # 4. Quelle Frame Count Start - handles -> Ziel First frame Frame in
-    df_target['First frame Frame in'] = df_source['Frame Count Start'] - df_source['handles']
+    # 4. Flexibler Start-Frame (First frame Frame in)
+    if handle_mode_start == "Subtrahieren (Standard)":
+        df_target['First frame Frame in'] = df_source['Frame Count Start'] - df_source['handles']
+    elif handle_mode_start == "Addieren":
+        df_target['First frame Frame in'] = df_source['Frame Count Start'] + df_source['handles']
+    else:  # Ignorieren
+        df_target['First frame Frame in'] = df_source['Frame Count Start']
+        
+    # 5. Flexibler End-Frame (Last frame Frame Out)
+    if handle_mode_end == "Addieren (Standard)":
+        df_target['Last frame Frame Out'] = df_source['Frame Count End'] + df_source['handles']
+    elif handle_mode_end == "Subtrahieren":
+        df_target['Last frame Frame Out'] = df_source['Frame Count End'] - df_source['handles']
+    else:  # Ignorieren
+        df_target['Last frame Frame Out'] = df_source['Frame Count End']
     
-    # 5. Quelle Frame Count End + handles -> Ziel Last frame Frame Out
-    df_target['Last frame Frame Out'] = df_source['Frame Count End'] + df_source['handles']
-    
-    # 6. Quelle Frame Count Duration + 2 * handles -> Ziel Working duration Frame Count
-    df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] + (2 * df_source['handles'])
+    # 6. Flexibler Duration-Frame (Working duration Frame Count)
+    if handle_mode_duration == "Addieren (Standard)":
+        df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] + (2 * df_source['handles'])
+    elif handle_mode_duration == "Subtrahieren":
+        df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] - (2 * df_source['handles'])
+    else:  # Ignorieren
+        df_target['Working duration Frame Count'] = df_source['Frame Count Duration']
     
     # 7. LEER: Description, Submitted For, Artist und Submission
     df_target['Description'] = ""
@@ -61,9 +76,39 @@ def convert_dataframe(df_source):
 # --- Streamlit Benutzeroberfläche ---
 st.set_page_config(page_title="VFX Shotlist Converter", layout="wide")
 
-st.title("🎬 Avid to Shotgrid CSV converter")
-st.write("Wandelt TabDelimited pull-list in CSV für Shotgrid um.")
+st.title("🎬 VFX Tab-Delimited Shotlist Converter")
+st.write("Wandelt die tabulatorgetrennte Quelldatei direkt in das KLR-Zielformat für ShotGrid um.")
 
+st.markdown("---")
+
+# --- Prominente Einstellungen im Hauptbereich über 3 Spalten ---
+st.subheader("⚙️ Mathematische Handle-Optionen für die Berechnung:")
+col_start, col_end, col_dur = st.columns(3)
+
+with col_start:
+    handle_mode_start = st.radio(
+        "**Frame Count Start (In-Frame):**",
+        ["Subtrahieren (Standard)", "Addieren", "Handles ignorieren"],
+        index=0
+    )
+
+with col_end:
+    handle_mode_end = st.radio(
+        "**Frame Count End (Out-Frame):**",
+        ["Addieren (Standard)", "Subtrahieren", "Handles ignorieren"],
+        index=0
+    )
+
+with col_dur:
+    handle_mode_duration = st.radio(
+        "**Frame Count Duration (Länge):**",
+        ["Addieren (Standard)", "Subtrahieren", "Handles ignorieren"],
+        index=0
+    )
+
+st.markdown("---")
+
+# --- Bereich für Datei-Upload ---
 uploaded_file = st.file_uploader("Tab-Delimited Quelldatei (.txt) hochladen", type=["txt"])
 
 if uploaded_file is not None:
@@ -108,8 +153,8 @@ if uploaded_file is not None:
         df_source = pd.DataFrame(adjusted_rows, columns=header)
         df_source.columns = df_source.columns.astype(str).str.strip()
         
-        # Konvertierung ausführen
-        df_converted = convert_dataframe(df_source)
+        # Konvertierung ausführen unter Berücksichtigung der Benutzereingaben
+        df_converted = convert_dataframe(df_source, handle_mode_start, handle_mode_end, handle_mode_duration)
         
         # Vorschau anzeigen
         st.subheader("Vorschau der konvertierten KLR-Liste:")
