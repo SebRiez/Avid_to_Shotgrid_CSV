@@ -62,7 +62,7 @@ def convert_dataframe(df_source):
 st.set_page_config(page_title="VFX Shotlist Converter", layout="wide")
 
 st.title("🎬 Avid to Shotgrid CSV converter")
-st.write("Wandelt TabDelimited pull-list ind CSV für Shotgrid um.")
+st.write("Wandelt TabDelimited pull-list in CSV für Shotgrid um.")
 
 uploaded_file = st.file_uploader("Tab-Delimited Quelldatei (.txt) hochladen", type=["txt"])
 
