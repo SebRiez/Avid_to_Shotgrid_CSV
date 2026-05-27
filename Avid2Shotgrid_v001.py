@@ -61,8 +61,8 @@ def convert_dataframe(df_source):
 # --- Streamlit Benutzeroberfläche ---
 st.set_page_config(page_title="VFX Shotlist Converter", layout="wide")
 
-st.title("🎬 VFX Tab-Delimited Shotlist Converter")
-st.write("Wandelt die tabulatorgetrennte Quelldatei direkt in das KLR-Zielformat für ShotGrid um.")
+st.title("🎬 Avid to Shotgrid CSV converter")
+st.write("Wandelt TabDelimited pull-list ind CSV für Shotgrid um.")
 
 uploaded_file = st.file_uploader("Tab-Delimited Quelldatei (.txt) hochladen", type=["txt"])
 
