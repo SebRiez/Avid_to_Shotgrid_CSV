@@ -35,28 +35,28 @@ def convert_dataframe(df_source, handle_mode_start, handle_mode_end, handle_mode
     df_target['File name'] = df_source['Name']
     
     # 3. LEER: Format File Type
-    df_target['Format File Type'] = "" 
+    df_target['Format File Type'] = ""
     
     # 4. Flexibler Start-Frame (First frame Frame in)
-    if handle_mode_start == "Subtrahieren (Standard)":
+    if handle_mode_start == "− Subtrahieren":
         df_target['First frame Frame in'] = df_source['Frame Count Start'] - df_source['handles']
-    elif handle_mode_start == "Addieren":
+    elif handle_mode_start == "+ Addieren":
         df_target['First frame Frame in'] = df_source['Frame Count Start'] + df_source['handles']
     else:  # Ignorieren
         df_target['First frame Frame in'] = df_source['Frame Count Start']
         
     # 5. Flexibler End-Frame (Last frame Frame Out)
-    if handle_mode_end == "Addieren (Standard)":
+    if handle_mode_end == "+ Addieren":
         df_target['Last frame Frame Out'] = df_source['Frame Count End'] + df_source['handles']
-    elif handle_mode_end == "Subtrahieren":
+    elif handle_mode_end == "− Subtrahieren":
         df_target['Last frame Frame Out'] = df_source['Frame Count End'] - df_source['handles']
     else:  # Ignorieren
         df_target['Last frame Frame Out'] = df_source['Frame Count End']
     
     # 6. Flexibler Duration-Frame (Working duration Frame Count)
-    if handle_mode_duration == "Addieren (Standard)":
+    if handle_mode_duration == "+ Addieren":
         df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] + (2 * df_source['handles'])
-    elif handle_mode_duration == "Subtrahieren":
+    elif handle_mode_duration == "− Subtrahieren":
         df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] - (2 * df_source['handles'])
     else:  # Ignorieren
         df_target['Working duration Frame Count'] = df_source['Frame Count Duration']
@@ -81,29 +81,39 @@ st.write("Wandelt die tabulatorgetrennte Quelldatei direkt in das KLR-Zielformat
 
 st.markdown("---")
 
-# --- Prominente Einstellungen im Hauptbereich über 3 Spalten ---
+# --- Einstellungen mit segmented_control ---
 st.subheader("⚙️ Mathematische Handle-Optionen für die Berechnung:")
+
 col_start, col_end, col_dur = st.columns(3)
 
 with col_start:
-    handle_mode_start = st.radio(
-        "**Frame Count Start (In-Frame):**",
-        ["Subtrahieren (Standard)", "Addieren", "Handles ignorieren"],
-        index=0
+    st.caption("⏮ Frame Count Start (In-Frame)")
+    handle_mode_start = st.segmented_control(
+        "In-Frame",
+        options=["− Subtrahieren", "+ Addieren", "Ignorieren"],
+        default="− Subtrahieren",
+        label_visibility="collapsed",
+        key="handle_start",
     )
 
 with col_end:
-    handle_mode_end = st.radio(
-        "**Frame Count End (Out-Frame):**",
-        ["Addieren (Standard)", "Subtrahieren", "Handles ignorieren"],
-        index=0
+    st.caption("⏭ Frame Count End (Out-Frame)")
+    handle_mode_end = st.segmented_control(
+        "Out-Frame",
+        options=["+ Addieren", "− Subtrahieren", "Ignorieren"],
+        default="+ Addieren",
+        label_visibility="collapsed",
+        key="handle_end",
     )
 
 with col_dur:
-    handle_mode_duration = st.radio(
-        "**Frame Count Duration (Länge):**",
-        ["Addieren (Standard)", "Subtrahieren", "Handles ignorieren"],
-        index=0
+    st.caption("⏱ Frame Count Duration")
+    handle_mode_duration = st.segmented_control(
+        "Duration",
+        options=["+ Addieren", "− Subtrahieren", "Ignorieren"],
+        default="+ Addieren",
+        label_visibility="collapsed",
+        key="handle_duration",
     )
 
 st.markdown("---")
