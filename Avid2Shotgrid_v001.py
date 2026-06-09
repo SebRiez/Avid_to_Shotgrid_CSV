@@ -196,7 +196,7 @@ if uploaded_file is not None:
             col_framein_on, col_frameout_on, col_framerange_on
         )
 
-        st.subheader("Preview of converted KLR list:")
+        st.subheader("Preview of converted list:")
         st.dataframe(df_converted)
 
         csv_buffer = io.StringIO()
