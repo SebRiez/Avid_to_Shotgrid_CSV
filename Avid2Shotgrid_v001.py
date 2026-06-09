@@ -97,34 +97,34 @@ st.markdown("---")
 # --- Handle calculation options ---
 st.subheader("⚙️ Handle calculation options:")
 
-col_start, col_end, col_dur = st.columns(3)
+col_start, col_end, col_dur, _ = st.columns([1, 1, 1, 2])
 
 with col_start:
-    st.caption("⏮ Frame Count Start (In-Frame)")
+    st.caption("⏮ In-Frame")
     handle_mode_start = st.segmented_control(
         "In-Frame",
         options=["− Subtract", "+ Add", "Ignore"],
-        default="− Subtract",
+        default="Ignore",
         label_visibility="collapsed",
         key="handle_start",
     )
 
 with col_end:
-    st.caption("⏭ Frame Count End (Out-Frame)")
+    st.caption("⏭ Out-Frame")
     handle_mode_end = st.segmented_control(
         "Out-Frame",
         options=["+ Add", "− Subtract", "Ignore"],
-        default="+ Add",
+        default="Ignore",
         label_visibility="collapsed",
         key="handle_end",
     )
 
 with col_dur:
-    st.caption("⏱ Frame Count Duration")
+    st.caption("⏱ Duration")
     handle_mode_duration = st.segmented_control(
         "Duration",
         options=["+ Add", "− Subtract", "Ignore"],
-        default="+ Add",
+        default="Ignore",
         label_visibility="collapsed",
         key="handle_duration",
     )
@@ -196,7 +196,7 @@ if uploaded_file is not None:
             col_framein_on, col_frameout_on, col_framerange_on
         )
 
-        st.subheader("Preview of converted list:")
+        st.subheader("preview of converted list:")
         st.dataframe(df_converted)
 
         csv_buffer = io.StringIO()
@@ -204,7 +204,7 @@ if uploaded_file is not None:
         csv_bytes = csv_buffer.getvalue().encode('utf-8')
 
         st.download_button(
-            label=f"💾 Download generated CSV ({export_filename})",
+            label=f"Download generated CSV 💾  ({export_filename})",
             data=csv_bytes,
             file_name=export_filename,
             mime="text/csv"
