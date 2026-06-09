@@ -4,7 +4,9 @@ import io
 import os
 from datetime import datetime
 
-def convert_dataframe(df_source, handle_mode_start, handle_mode_end, handle_mode_duration):
+def convert_dataframe(df_source, handle_mode_start, handle_mode_end, handle_mode_duration,
+                      col_link_on, col_filename_on,
+                      col_framein_on, col_frameout_on, col_framerange_on):
     df_target = pd.DataFrame()
 
     # Strip invisible characters from all column names
@@ -28,48 +30,58 @@ def convert_dataframe(df_source, handle_mode_start, handle_mode_end, handle_mode
 
     # --- TRANSFORMATION LOGIC ---
 
-    # 1. Source Name first 17 characters -> Target Link
-    df_target['Link'] = df_source['Name'].str[:17]
+    # Link
+    df_target['Link'] = df_source['Name'].str[:17] if col_link_on else ""
 
-    # 2. Source Name full -> Target File name
-    df_target['File name'] = df_source['Name']
+    # File name
+    df_target['File name'] = df_source['Name'] if col_filename_on else ""
 
-    # 3. EMPTY: Format File Type
+    # Format File Type (always empty)
     df_target['Format File Type'] = ""
 
-    # 4. Flexible Start Frame (First frame Frame in)
-    if handle_mode_start == "− Subtract":
-        df_target['First frame Frame in'] = df_source['Frame Count Start'] - df_source['handles']
-    elif handle_mode_start == "+ Add":
-        df_target['First frame Frame in'] = df_source['Frame Count Start'] + df_source['handles']
-    else:  # Ignore
-        df_target['First frame Frame in'] = df_source['Frame Count Start']
+    # First Frame
+    if col_framein_on:
+        if handle_mode_start == "− Subtract":
+            df_target['First Frame'] = df_source['Frame Count Start'] - df_source['handles']
+        elif handle_mode_start == "+ Add":
+            df_target['First Frame'] = df_source['Frame Count Start'] + df_source['handles']
+        else:
+            df_target['First Frame'] = df_source['Frame Count Start']
+    else:
+        df_target['First Frame'] = ""
 
-    # 5. Flexible End Frame (Last frame Frame Out)
-    if handle_mode_end == "+ Add":
-        df_target['Last frame Frame Out'] = df_source['Frame Count End'] + df_source['handles']
-    elif handle_mode_end == "− Subtract":
-        df_target['Last frame Frame Out'] = df_source['Frame Count End'] - df_source['handles']
-    else:  # Ignore
-        df_target['Last frame Frame Out'] = df_source['Frame Count End']
+    # Last frame
+    if col_frameout_on:
+        if handle_mode_end == "+ Add":
+            df_target['Last frame'] = df_source['Frame Count End'] + df_source['handles']
+        elif handle_mode_end == "− Subtract":
+            df_target['Last frame'] = df_source['Frame Count End'] - df_source['handles']
+        else:
+            df_target['Last frame'] = df_source['Frame Count End']
+    else:
+        df_target['Last frame'] = ""
 
-    # 6. Flexible Duration Frame (Working duration Frame Count)
-    if handle_mode_duration == "+ Add":
-        df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] + (2 * df_source['handles'])
-    elif handle_mode_duration == "− Subtract":
-        df_target['Working duration Frame Count'] = df_source['Frame Count Duration'] - (2 * df_source['handles'])
-    else:  # Ignore
-        df_target['Working duration Frame Count'] = df_source['Frame Count Duration']
+    # Frame Range
+    if col_framerange_on:
+        if handle_mode_duration == "+ Add":
+            df_target['Frame Range'] = df_source['Frame Count Duration'] + (2 * df_source['handles'])
+        elif handle_mode_duration == "− Subtract":
+            df_target['Frame Range'] = df_source['Frame Count Duration'] - (2 * df_source['handles'])
+        else:
+            df_target['Frame Range'] = df_source['Frame Count Duration']
+    else:
+        df_target['Frame Range'] = ""
 
-    # 7. EMPTY: Description, Submitted For, Artist and Submission
+    # Always-empty columns
     df_target['Description'] = ""
     df_target['Submitted For'] = ""
     df_target['Artist'] = ""
     df_target['Submission'] = ""
 
-    # Format as integers (no decimal places)
-    for col in ['First frame Frame in', 'Last frame Frame Out', 'Working duration Frame Count']:
-        df_target[col] = df_target[col].fillna(0).astype(int)
+    # Format numeric columns as integers (only when filled)
+    for col in ['First Frame', 'Last frame', 'Frame Range']:
+        if col in df_target.columns and df_target[col].dtype != object:
+            df_target[col] = df_target[col].fillna(0).astype(int)
 
     return df_target
 
@@ -82,7 +94,7 @@ st.write("Converts the tab-delimited source file directly into the target format
 
 st.markdown("---")
 
-# --- Settings with segmented_control ---
+# --- Handle calculation options ---
 st.subheader("⚙️ Handle calculation options:")
 
 col_start, col_end, col_dur = st.columns(3)
@@ -119,20 +131,39 @@ with col_dur:
 
 st.markdown("---")
 
-# --- File upload area ---
+# --- Column toggle switches ---
+st.subheader("🗂️ Output columns:")
+
+toggle_cols = st.columns(5)
+
+with toggle_cols[0]:
+    col_link_on       = st.toggle("Link",        value=True, key="tog_link")
+
+with toggle_cols[1]:
+    col_filename_on   = st.toggle("File name",   value=True, key="tog_filename")
+
+with toggle_cols[2]:
+    col_framein_on    = st.toggle("First Frame",  value=True, key="tog_framein")
+
+with toggle_cols[3]:
+    col_frameout_on   = st.toggle("Last frame",   value=True, key="tog_frameout")
+
+with toggle_cols[4]:
+    col_framerange_on = st.toggle("Frame Range",  value=True, key="tog_framerange")
+
+st.markdown("---")
+
+# --- File upload ---
 uploaded_file = st.file_uploader("Upload tab-delimited source file (.txt)", type=["txt"])
 
 if uploaded_file is not None:
     try:
-        # Generate dynamic export filename
         base_filename = os.path.splitext(uploaded_file.name)[0]
         current_date = datetime.now().strftime("%y%m%d")
         export_filename = f"{base_filename}_toShotgrid_{current_date}_v01.csv"
 
-        # Read file as raw bytes
         raw_bytes = uploaded_file.getvalue()
 
-        # Improved encoding detection
         try:
             text_content = raw_bytes.decode('utf-8-sig')
         except UnicodeDecodeError:
@@ -141,17 +172,12 @@ if uploaded_file is not None:
             except UnicodeDecodeError:
                 text_content = raw_bytes.decode('latin-1', errors='ignore')
 
-        # Normalise line endings
         lines = [line for line in text_content.replace('\r\n', '\r').replace('\n', '\r').split('\r') if line.strip()]
-
-        # Split each line by tab
         parsed_data = [line.split('\t') for line in lines]
 
-        # Separate header and data rows
         header = [col.strip() for col in parsed_data[0]]
         data_rows = parsed_data[1:]
 
-        # Align column count
         adjusted_rows = []
         for row in data_rows:
             if len(row) < len(header):
@@ -160,23 +186,23 @@ if uploaded_file is not None:
                 row = row[:len(header)]
             adjusted_rows.append(row)
 
-        # Build DataFrame
         df_source = pd.DataFrame(adjusted_rows, columns=header)
         df_source.columns = df_source.columns.astype(str).str.strip()
 
-        # Run conversion with user settings
-        df_converted = convert_dataframe(df_source, handle_mode_start, handle_mode_end, handle_mode_duration)
+        df_converted = convert_dataframe(
+            df_source,
+            handle_mode_start, handle_mode_end, handle_mode_duration,
+            col_link_on, col_filename_on,
+            col_framein_on, col_frameout_on, col_framerange_on
+        )
 
-        # Show preview
         st.subheader("Preview of converted KLR list:")
         st.dataframe(df_converted)
 
-        # Prepare CSV in memory for download
         csv_buffer = io.StringIO()
         df_converted.to_csv(csv_buffer, index=False)
         csv_bytes = csv_buffer.getvalue().encode('utf-8')
 
-        # Download button with dynamic filename
         st.download_button(
             label=f"💾 Download generated CSV ({export_filename})",
             data=csv_bytes,
